@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class CharController : MonoBehaviour
@@ -9,6 +10,7 @@ public class CharController : MonoBehaviour
     public Rigidbody2D rig;
     public ParticleSystem deathVFX;
     public SpriteRenderer spriteRend;
+    public Transform sheepPivot;
 
     [Header("Stats")]
     public float movSpeed;
@@ -23,6 +25,9 @@ public class CharController : MonoBehaviour
     private bool m_jumping = false;
 
     private Vector3 spawnPos;
+
+    private List<GameObject> m_sheepCollection = new List<GameObject>();
+    private PortalBehaviour portalBehaviour;
 
     private void OnCollisionEnter2D(Collision2D _col)
     {
@@ -40,6 +45,23 @@ public class CharController : MonoBehaviour
             anim.SetBool("Jumping", false);
             m_jumping = false;
         }
+
+        if (_col.gameObject.CompareTag("Sheep"))
+        {
+            if (!m_sheepCollection.Contains(_col.gameObject))
+            {
+                _col.gameObject.GetComponent<Rigidbody2D>().simulated = false;
+                _col.gameObject.transform.parent = sheepPivot;
+                _col.gameObject.transform.localPosition = new Vector3(0, 3f * m_sheepCollection.Count, 0);
+                m_sheepCollection.Add(_col.gameObject);
+            }
+        }
+
+        if (_col.gameObject.CompareTag("Portal"))
+        {
+            portalBehaviour = _col.gameObject.GetComponent<PortalBehaviour>();
+            StartCoroutine("DropSheep");
+        }
     }
 
     private void Start()
@@ -54,6 +76,8 @@ public class CharController : MonoBehaviour
         m_movInput = Input.GetAxis("Horizontal");
         m_jump = Input.GetButtonDown("Jump");
 
+        spriteRend.flipX = m_movInput < 0;
+
         // Movement and Animation triggers
         m_currentSpeed = m_movInput * movSpeed;
 
@@ -63,6 +87,7 @@ public class CharController : MonoBehaviour
         {
             rig.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
             anim.SetBool("Jumping", true);
+            anim.SetTrigger("JumpStart");
             m_jumping = true;
         }
 
@@ -94,5 +119,26 @@ public class CharController : MonoBehaviour
         transform.position = spawnPos;
         rig.simulated = true;
         spriteRend.enabled = true;
+    }
+
+    public IEnumerator DropSheep()
+    {
+        if(m_sheepCollection.Count > 0)
+        {
+            rig.simulated = false;
+
+            m_sheepCollection.Last().transform.parent = null;
+            m_sheepCollection.Last().transform.position = portalBehaviour.transform.position;
+            portalBehaviour.linkedSheep = m_sheepCollection.Last();
+            m_sheepCollection.Remove(m_sheepCollection.Last());
+            portalBehaviour.TriggerTP();
+
+            yield return new WaitForSeconds(0.5f);
+
+            StartCoroutine("DropSheep");
+        } else
+        {
+            rig.simulated = true;
+        }
     }
 }

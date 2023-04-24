@@ -6,6 +6,8 @@ TagManager:
   tags:
   - Floor
   - HurtBox
+  - Sheep
+  - Portal
   layers:
   - Default
   - TransparentFX
@@ -13,8 +15,8 @@ TagManager:
   - NoPhysics
   - Water
   - UI
-  - 
-  - 
+  - Sheep
+  - Character
   - 
   - 
   - 
